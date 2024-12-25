@@ -186,4 +186,4 @@ toggleButton:SetFrameStrata("HIGH")
 toggleButton:SetClampedToScreen(true)
 
 -- Periodically scan for nameplates
-C_Timer.NewTicker(0.5, ScanNameplates)
+C_Timer.NewTicker(1.0, ScanNameplates)
