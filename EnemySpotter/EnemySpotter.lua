@@ -17,7 +17,7 @@ local isEnabled = true
 
 -- Create a movable and resizable window for alerts
 local alertWindow = CreateFrame("Frame", "EnemySpotterAlertWindow", UIParent, "BackdropTemplate")
-alertWindow:SetSize(200, 100) -- Default smaller vertical size
+alertWindow:SetSize(200, 14) -- Default to fit one character height
 alertWindow:SetPoint("CENTER") -- Default position
 alertWindow:SetBackdrop({
     bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -27,7 +27,7 @@ alertWindow:SetBackdrop({
     edgeSize = 16,
     insets = { left = 4, right = 4, top = 4, bottom = 4 },
 })
-alertWindow:SetBackdropColor(0, 0, 0, 0.8)
+alertWindow:SetBackdropColor(0, 0, 0, 0.4)
 alertWindow:SetMovable(true)
 alertWindow:EnableMouse(true)
 alertWindow:RegisterForDrag("LeftButton")
@@ -52,6 +52,15 @@ end)
 -- Table to track detected players
 local detectedPlayers = {}
 
+-- Function to update the window size dynamically
+local function UpdateWindowSize()
+    local lineHeight = 14 -- Height of one line of text
+    local text = alertText:GetText() or "" -- Safeguard against nil
+    local numLines = select(2, text:gsub("\n", "")) + 1 -- Count lines, at least 1 if empty
+    local newHeight = math.max(14 + 20, numLines * lineHeight + 20) -- Minimum height for one line
+    alertWindow:SetHeight(newHeight)
+end
+
 -- Function to send player alerts
 local function AlertPlayer(playerName)
     if playerName and isEnabled and not detectedPlayers[playerName] then
@@ -65,11 +74,17 @@ local function AlertPlayer(playerName)
         -- Play a custom sound
         PlaySoundFile("Sound\\Spells\\PVPFlagTaken.ogg")
 
+        -- Update the window size
+        UpdateWindowSize()
+
         -- Fade out the name after 10 seconds
         C_Timer.After(10, function()
             detectedPlayers[playerName] = nil
             local updatedText = alertText:GetText() or ""
             alertText:SetText(string.gsub(updatedText, "Ally: " .. playerName .. "\n", ""))
+
+            -- Update the window size after removal
+            UpdateWindowSize()
         end)
     end
 end
@@ -80,6 +95,20 @@ local function IsHostilePlayer(unit)
         return true
     end
     return false
+end
+
+-- Function to scan all visible nameplates
+local function ScanNameplates()
+    if not isEnabled then return end
+    for _, unit in pairs(C_NamePlate.GetNamePlates()) do
+        local unitID = unit.unitFrame.unit
+        if unitID and IsHostilePlayer(unitID) then
+            local name = UnitName(unitID)
+            if name then
+                AlertPlayer(name)
+            end
+        end
+    end
 end
 
 -- Function to check a unit for player status
@@ -155,3 +184,6 @@ end)
 -- Ensure the button is always visible
 toggleButton:SetFrameStrata("HIGH")
 toggleButton:SetClampedToScreen(true)
+
+-- Periodically scan for nameplates
+C_Timer.NewTicker(0.5, ScanNameplates)
