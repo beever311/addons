@@ -8,6 +8,7 @@ frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 frame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 frame:RegisterEvent("UNIT_AURA")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD") -- Ensure proper initialization on login or reload
 
 -- Determine the opposing faction
 local opposingFaction = UnitFactionGroup("player") == "Horde" and "Alliance" or "Horde"
@@ -52,13 +53,20 @@ end)
 -- Table to track detected players
 local detectedPlayers = {}
 
--- Function to update the window size dynamically
+-- Function to update the window size dynamically and hide when empty
 local function UpdateWindowSize()
     local lineHeight = 14 -- Height of one line of text
     local text = alertText:GetText() or "" -- Safeguard against nil
     local numLines = select(2, text:gsub("\n", "")) + 1 -- Count lines, at least 1 if empty
     local newHeight = math.max(14 + 20, numLines * lineHeight + 20) -- Minimum height for one line
     alertWindow:SetHeight(newHeight)
+
+    -- Hide the window if there are no lines to display
+    if numLines == 1 and text == "" then
+        alertWindow:Hide()
+    else
+        alertWindow:Show()
+    end
 end
 
 -- Function to send player alerts
@@ -125,7 +133,11 @@ end
 frame:SetScript("OnEvent", function(self, event, ...)
     if not isEnabled then return end
 
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+    if event == "PLAYER_ENTERING_WORLD" then
+        -- Initialize the window on login or reload
+        UpdateWindowSize()
+
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
         -- Parse combat log events
         local _, eventType, _, sourceGUID, sourceName, sourceFlags, _, destGUID, destName, destFlags = CombatLogGetCurrentEventInfo()
 
@@ -177,6 +189,14 @@ end)
 -- Toggle functionality
 toggleButton:SetScript("OnClick", function(self)
     isEnabled = not isEnabled
+    if isEnabled then
+        alertWindow:Show()
+        C_Timer.After(5, function()
+            UpdateWindowSize()
+        end)
+    else
+        alertWindow:Hide()
+    end
     local status = isEnabled and "|cff00ff00Spy ON|r" or "|cffff0000Spy OFF|r" -- Green for ON, red for OFF
     DEFAULT_CHAT_FRAME:AddMessage(status)
 end)
