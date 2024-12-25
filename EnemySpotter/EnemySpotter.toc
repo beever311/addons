@@ -1,0 +1,7 @@
+## Interface: 11403
+## Title: Enemy Spotter
+## Notes: Alerts you when a player from Alliance show up in your environment.
+## Author: CRITiK
+## Version: 1.0
+
+EnemySpotter.lua
